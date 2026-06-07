@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>医疗废物转运交接系统</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+.header { background: linear-gradient(135deg, #1e88e5, #1565c0); color: white; padding: 1rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.header h1 { font-size: 1.5rem; }
+.nav { display: flex; gap: 0.5rem; margin-top: 1rem; }
+.nav button { padding: 0.5rem 1.2rem; border: none; border-radius: 4px; cursor: pointer; background: rgba(255,255,255,0.2); color: white; font-size: 0.9rem; transition: all 0.2s; }
+.nav button.active, .nav button:hover { background: white; color: #1565c0; }
+.container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+.card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.card h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #1565c0; border-bottom: 2px solid #e3f2fd; padding-bottom: 0.5rem; }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; font-size: 0.9rem; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #1e88e5; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.btn { padding: 0.6rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
+.btn-primary { background: #1e88e5; color: white; }
+.btn-primary:hover { background: #1565c0; }
+.btn-success { background: #43a047; color: white; }
+.btn-success:hover { background: #2e7d32; }
+.btn-warning { background: #fb8c00; color: white; }
+.btn-warning:hover { background: #ef6c00; }
+.btn:disabled { background: #ccc; cursor: not-allowed; }
+.table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.table th, .table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+.table th { background: #f5f5f5; font-weight: 600; }
+.table tr:hover { background: #fafafa; }
+.badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
+.badge-packed { background: #e3f2fd; color: #1565c0; }
+.badge-weighed { background: #fff3e0; color: #ef6c00; }
+.badge-signed { background: #e8f5e9; color: #2e7d32; }
+.badge-damaged { background: #ffebee; color: #c62828; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-card { background: white; padding: 1.2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+.stat-card .number { font-size: 2rem; font-weight: bold; color: #1565c0; }
+.stat-card .label { font-size: 0.85rem; color: #666; margin-top: 0.3rem; }
+.checkbox-group { display: flex; align-items: center; gap: 0.5rem; }
+.checkbox-group input { width: auto; }
+.alert { padding: 0.8rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+.alert-error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+.alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.hidden { display: none; }
+.action-buttons { display: flex; gap: 0.5rem; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🏥 医疗废物转运交接系统</h1>
+  <div class="nav">
+    <button onclick="showView('pack')" class="active" id="nav-pack">科室打包</button>
+    <button onclick="showView('transfer')" id="nav-transfer">转运员称重交接</button>
+    <button onclick="showView('admin')" id="nav-admin">后勤主管查看</button>
+  </div>
+</div>
+
+<div class="container">
+  <div id="view-pack">
+    <div class="card">
+      <h2>📦 科室打包医废</h2>
+      <div id="pack-alert"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>选择科室</label>
+          <select id="pack-department"></select>
+        </div>
+        <div class="form-group">
+          <label>选择周转箱</label>
+          <select id="pack-container"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>医废类型</label>
+          <select id="pack-waste-type">
+            <option value="感染性">感染性废物</option>
+            <option value="病理性">病理性废物</option>
+            <option value="损伤性">损伤性废物</option>
+            <option value="药物性">药物性废物</option>
+            <option value="化学性">化学性废物</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>打包人</label>
+          <input type="text" id="packed-by" placeholder="请输入打包人姓名">
+        </div>
+      </div>
+      <div class="form-group checkbox-group">
+        <input type="checkbox" id="package-damaged">
+        <label for="package-damaged">包装破损（勾选后将无法交接）</label>
+      </div>
+      <div class="form-group">
+        <label>备注</label>
+        <textarea id="pack-notes" rows="2" placeholder="可选，填写其他信息"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitPack()">提交打包</button>
+    </div>
+    <div class="card">
+      <h2>📋 已打包待交接列表</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>科室</th>
+            <th>周转箱</th>
+            <th>类型</th>
+            <th>打包人</th>
+            <th>包装状态</th>
+            <th>时间</th>
+          </tr>
+        </thead>
+        <tbody id="packed-list"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="view-transfer" class="hidden">
+    <div class="card">
+      <h2>⚖️ 称重交接</h2>
+      <div id="transfer-alert"></div>
+      <div class="form-group">
+        <label>选择待交接记录</label>
+        <select id="transfer-select" onchange="loadTransferDetail()">
+          <option value="">-- 请选择 --</option>
+        </select>
+      </div>
+      <div id="transfer-detail" class="hidden">
+        <div class="form-row">
+          <div class="form-group">
+            <label>科室</label>
+            <input type="text" id="detail-department" readonly>
+          </div>
+          <div class="form-group">
+            <label>周转箱</label>
+            <input type="text" id="detail-container" readonly>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>医废类型</label>
+            <input type="text" id="detail-type" readonly>
+          </div>
+          <div class="form-group">
+            <label>周转箱上限</label>
+            <input type="text" id="detail-max-weight" readonly>
+          </div>
+        </div>
+        <div id="detail-damage-info" class="alert alert-error hidden">
+          ⚠️ 包装破损，无法进行称重交接！请更换包装后再操作。
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>称重重量 (kg)</label>
+            <input type="number" step="0.01" id="weight-input" placeholder="请输入称重重量">
+          </div>
+          <div class="form-group">
+            <label>称重员</label>
+            <input type="text" id="weighed-by" placeholder="请输入称重员姓名">
+          </div>
+        </div>
+        <div class="form-group" id="sign-section" style="display:none;">
+          <label>签收人</label>
+          <input type="text" id="signed-by" placeholder="请输入签收人姓名">
+        </div>
+        <div class="action-buttons">
+          <button class="btn btn-primary" id="btn-weigh" onclick="submitWeigh()">确认称重</button>
+          <button class="btn btn-success" id="btn-sign" style="display:none;" onclick="submitSign()">确认签收</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-admin" class="hidden">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="number" id="stat-total">0</div><div class="label">总记录数</div></div>
+      <div class="stat-card"><div class="number" id="stat-pending">0</div><div class="label">待称重</div></div>
+      <div class="stat-card"><div class="number" id="stat-weighed">0</div><div class="label">待签收</div></div>
+      <div class="stat-card"><div class="number" id="stat-signed">0</div><div class="label">已完成</div></div>
+      <div class="stat-card"><div class="number" id="stat-weight">0</div><div class="label">总重量 (kg)</div></div>
+    </div>
+    <div class="card">
+      <h2>📊 交接记录去向</h2>
+      <div class="form-group">
+        <label>筛选状态</label>
+        <select id="filter-status" onchange="loadAllTransfers()">
+          <option value="">全部</option>
+          <option value="packed">已打包</option>
+          <option value="weighed">已称重</option>
+          <option value="signed">已签收</option>
+        </select>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>科室</th>
+            <th>周转箱</th>
+            <th>类型</th>
+            <th>重量(kg)</th>
+            <th>状态</th>
+            <th>打包人</th>
+            <th>称重员</th>
+            <th>签收人</th>
+            <th>时间</th>
+          </tr>
+        </thead>
+        <tbody id="all-transfers-list"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+
+function showView(view) {
+  ['pack', 'transfer', 'admin'].forEach(v => {
+    document.getElementById('view-' + v).classList.add('hidden');
+    document.getElementById('nav-' + v).classList.remove('active');
+  });
+  document.getElementById('view-' + view).classList.remove('hidden');
+  document.getElementById('nav-' + view).classList.add('active');
+  if (view === 'pack') { loadDepartments(); loadContainers(); loadPackedList(); }
+  if (view === 'transfer') { loadTransferSelect(); }
+  if (view === 'admin') { loadStats(); loadAllTransfers(); }
+}
+
+async function loadDepartments() {
+  const res = await fetch(API + '/departments');
+  const data = await res.json();
+  const sel = document.getElementById('pack-department');
+  sel.innerHTML = data.data.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+}
+
+async function loadContainers() {
+  const res = await fetch(API + '/containers/available');
+  const data = await res.json();
+  const sel = document.getElementById('pack-container');
+  sel.innerHTML = data.data.map(c => `<option value="${c.id}">${c.code} (上限${c.max_weight}kg)</option>`).join('');
+}
+
+async function submitPack() {
+  const body = {
+    department_id: parseInt(document.getElementById('pack-department').value),
+    container_id: parseInt(document.getElementById('pack-container').value),
+    waste_type: document.getElementById('pack-waste-type').value,
+    package_damaged: document.getElementById('package-damaged').checked ? 1 : 0,
+    packed_by: document.getElementById('packed-by').value,
+    notes: document.getElementById('pack-notes').value
+  };
+  if (!body.packed_by) { showAlert('pack-alert', '请输入打包人姓名', 'error'); return; }
+  const res = await fetch(API + '/transfers', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (data.success) {
+    showAlert('pack-alert', '打包成功！', 'success');
+    document.getElementById('packed-by').value = '';
+    document.getElementById('package-damaged').checked = false;
+    document.getElementById('pack-notes').value = '';
+    loadContainers(); loadPackedList();
+  } else {
+    showAlert('pack-alert', data.message, 'error');
+  }
+}
+
+async function loadPackedList() {
+  const res = await fetch(API + '/transfers?status=packed');
+  const data = await res.json();
+  const tbody = document.getElementById('packed-list');
+  tbody.innerHTML = data.data.map(t => `
+    <tr>
+      <td>${t.id}</td>
+      <td>${t.department_name}</td>
+      <td>${t.container_code}</td>
+      <td>${t.waste_type}</td>
+      <td>${t.packed_by}</td>
+      <td>${t.package_damaged ? '<span class="badge badge-damaged">破损</span>' : '<span class="badge badge-packed">完好</span>'}</td>
+      <td>${t.packed_at}</td>
+    </tr>
+  `).join('');
+}
+
+async function loadTransferSelect() {
+  const res = await fetch(API + '/transfers');
+  const data = await res.json();
+  const sel = document.getElementById('transfer-select');
+  const filtered = data.data.filter(t => t.status !== 'signed');
+  sel.innerHTML = '<option value="">-- 请选择 --</option>' + filtered.map(t => 
+    `<option value="${t.id}">${t.id} - ${t.department_name} - ${t.container_code} (${t.waste_type})</option>`
+  ).join('');
+  document.getElementById('transfer-detail').classList.add('hidden');
+}
+
+async function loadTransferDetail() {
+  const id = document.getElementById('transfer-select').value;
+  if (!id) { document.getElementById('transfer-detail').classList.add('hidden'); return; }
+  const res = await fetch(API + '/transfers/' + id);
+  const data = await res.json();
+  if (data.success) {
+    const t = data.data;
+    document.getElementById('detail-department').value = t.department_name;
+    document.getElementById('detail-container').value = t.container_code;
+    document.getElementById('detail-type').value = t.waste_type;
+    document.getElementById('detail-max-weight').value = t.max_weight + ' kg';
+    document.getElementById('weight-input').value = t.weight || '';
+    document.getElementById('weighed-by').value = '';
+    document.getElementById('signed-by').value = '';
+    const damageInfo = document.getElementById('detail-damage-info');
+    if (t.package_damaged) {
+      damageInfo.classList.remove('hidden');
+      document.getElementById('weight-input').disabled = true;
+      document.getElementById('weighed-by').disabled = true;
+      document.getElementById('btn-weigh').disabled = true;
+    } else {
+      damageInfo.classList.add('hidden');
+      document.getElementById('weight-input').disabled = false;
+      document.getElementById('weighed-by').disabled = false;
+      document.getElementById('btn-weigh').disabled = false;
+    }
+    if (t.status === 'weighed') {
+      document.getElementById('sign-section').style.display = 'block';
+      document.getElementById('btn-sign').style.display = 'inline-block';
+      document.getElementById('weight-input').disabled = true;
+      document.getElementById('weighed-by').disabled = true;
+      document.getElementById('btn-weigh').style.display = 'none';
+    } else {
+      document.getElementById('sign-section').style.display = 'none';
+      document.getElementById('btn-sign').style.display = 'none';
+      document.getElementById('btn-weigh').style.display = 'inline-block';
+    }
+    if (t.status === 'signed') {
+      document.getElementById('weight-input').disabled = true;
+      document.getElementById('weighed-by').disabled = true;
+      document.getElementById('signed-by').disabled = true;
+      document.getElementById('btn-weigh').disabled = true;
+      document.getElementById('btn-sign').disabled = true;
+    }
+    document.getElementById('transfer-detail').classList.remove('hidden');
+  }
+}
+
+async function submitWeigh() {
+  const id = document.getElementById('transfer-select').value;
+  const weight = parseFloat(document.getElementById('weight-input').value);
+  const weighed_by = document.getElementById('weighed-by').value;
+  if (!weight || !weighed_by) { showAlert('transfer-alert', '请填写重量和称重员', 'error'); return; }
+  const res = await fetch(API + '/transfers/' + id + '/weigh', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ weight, weighed_by })
+  });
+  const data = await res.json();
+  if (data.success) {
+    showAlert('transfer-alert', '称重成功！请进行签收。', 'success');
+    loadTransferDetail();
+  } else {
+    showAlert('transfer-alert', data.message, 'error');
+  }
+}
+
+async function submitSign() {
+  const id = document.getElementById('transfer-select').value;
+  const signed_by = document.getElementById('signed-by').value;
+  if (!signed_by) { showAlert('transfer-alert', '请输入签收人', 'error'); return; }
+  const res = await fetch(API + '/transfers/' + id + '/sign', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ signed_by })
+  });
+  const data = await res.json();
+  if (data.success) {
+    showAlert('transfer-alert', '签收成功！交接完成。', 'success');
+    loadTransferSelect();
+  } else {
+    showAlert('transfer-alert', data.message, 'error');
+  }
+}
+
+async function loadStats() {
+  const res = await fetch(API + '/stats');
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('stat-total').textContent = data.data.total;
+    document.getElementById('stat-pending').textContent = data.data.pending;
+    document.getElementById('stat-weighed').textContent = data.data.weighed;
+    document.getElementById('stat-signed').textContent = data.data.signed;
+    document.getElementById('stat-weight').textContent = data.data.totalWeight.toFixed(2);
+  }
+}
+
+async function loadAllTransfers() {
+  const status = document.getElementById('filter-status').value;
+  let url = API + '/transfers';
+  if (status) url += '?status=' + status;
+  const res = await fetch(url);
+  const data = await res.json();
+  const tbody = document.getElementById('all-transfers-list');
+  const statusMap = { packed: '已打包', weighed: '已称重', signed: '已签收' };
+  const badgeMap = { packed: 'badge-packed', weighed: 'badge-weighed', signed: 'badge-signed' };
+  tbody.innerHTML = data.data.map(t => `
+    <tr>
+      <td>${t.id}</td>
+      <td>${t.department_name}</td>
+      <td>${t.container_code}</td>
+      <td>${t.waste_type}</td>
+      <td>${t.weight || '-'}</td>
+      <td><span class="badge ${badgeMap[t.status]}">${statusMap[t.status]}</span></td>
+      <td>${t.packed_by || '-'}</td>
+      <td>${t.weighed_by || '-'}</td>
+      <td>${t.signed_by || '-'}</td>
+      <td>${t.signed_at || t.weighed_at || t.packed_at}</td>
+    </tr>
+  `).join('');
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.className = 'alert alert-' + type;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+showView('pack');
+</script>
+</body>
+</html>

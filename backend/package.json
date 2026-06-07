@@ -1,0 +1,16 @@
+{
+  "name": "medical-waste-transfer",
+  "version": "1.0.0",
+  "description": "医疗废物转运交接系统后端",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "init-db": "node init-db.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "sqlite3": "^5.1.6",
+    "body-parser": "^1.20.2"
+  }
+}
